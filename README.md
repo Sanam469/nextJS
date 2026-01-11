@@ -1,3 +1,5 @@
+My first Full Stack project
+
 🔐 Secure Auth Dashboard (Next.js)
 
 A modern authentication system built with Next.js App Router, focusing on clean architecture, performance, and premium UI/UX.
