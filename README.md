@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+🔐 Secure Auth Dashboard (Next.js)
 
-## Getting Started
+A modern authentication system built with Next.js App Router, focusing on clean architecture, performance, and premium UI/UX.
 
-First, run the development server:
+🚀 Workflow:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Signup
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Client Component
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Controlled form state
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+User registers via /api/users/signup
 
-## Learn More
+Login
 
-To learn more about Next.js, take a look at the following resources:
+Client Component
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Authenticates via /api/users/login
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Session established → redirect to dashboard
 
-## Deploy on Vercel
+Dashboard (/profile)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Client Component
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Secure logout
+
+Fetches user data from /api/users/me
+
+Skeleton loaders + smooth interactions
+
+User Profile (/profile/[id])
+
+Server Component
+
+Async route params handled correctly
+
+Zero client-only code
+
+Tailwind-only animations (App Router safe)
+
+🧠 Architecture Flex
+
+Correct Server vs Client Component separation
+
+No styled-jsx in Server Components
+
+No unnecessary "use client"
+
+GPU-safe animations only
+
+Clean, scalable structure
+
+🎨 UI / UX Flex
+
+Dark, premium design system
+
+Subtle motion, no cartoon effects
+
+Intentional empty states
+
+Smooth page and element transitions
+
+🛠 Tech Stack
+
+Next.js (App Router)
+
+React + TypeScript
+
+Tailwind CSS
+
+Axios
+
+React Hot Toast
+
+🏁 TL;DR
+
+Looks expensive.
+Feels smooth.
+Architected properly.
+
+Not a demo.
+Built like a real product. 🖤
