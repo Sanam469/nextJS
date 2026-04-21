@@ -215,11 +215,19 @@ export default function ARGolf() {
 
             const dist = Math.hypot(ball.x - hole.x, ball.y - hole.y);
             if (dist < hole.radius) {
-                setScore(s => s + 1);
-                setHoleSpeed(s => s + 1);
-                setEffect('win');
+                const newScore = score + 1;
+                if (newScore >= 12) {
+                    setScore(0);
+                    setHoleSpeed(0);
+                    setEffect('win');
+                    resetPositions();
+                } else {
+                    setScore(newScore);
+                    setHoleSpeed(s => s + 2);
+                    setEffect('win');
+                    resetBall(ball, width, height);
+                }
                 if (winAudioRef.current) { winAudioRef.current.currentTime = 0; winAudioRef.current.play().catch(() => { }); }
-                resetBall(ball, width, height);
             } else if (ball.y < -20) {
                 if (missAudioRef.current) { missAudioRef.current.currentTime = 0; missAudioRef.current.play().catch(() => { }); }
                 // Speed no longer decreases on miss
