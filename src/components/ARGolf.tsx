@@ -443,18 +443,20 @@ export default function ARGolf() {
                 </div>
             )}
 
-            <div className="absolute bottom-12 left-12 flex flex-col items-start gap-4 z-40">
+            <div className="absolute bottom-12 right-12 flex flex-col items-end gap-4 z-40">
                 <button 
                     onClick={() => setIsHardMode(!isHardMode)}
-                    className="group bg-black/60 hover:bg-black/80 backdrop-blur-3xl text-white border border-white/20 px-8 py-5 rounded-[2rem] font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-2xl flex items-center gap-4 border-r-4 border-r-purple-500"
+                    className="group bg-black/60 hover:bg-black/80 backdrop-blur-3xl text-white border border-white/20 px-8 py-5 rounded-[2rem] font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-2xl flex items-center gap-4 border-l-4 border-l-purple-500"
                 >
-                    <span className="text-xl">😈</span>
-                    <div className="flex flex-col items-start text-left">
+                    <div className="flex flex-col items-end text-right">
                         <span className="opacity-40 text-[8px] tracking-[0.3em]">Difficulty: {isHardMode ? 'Insane' : 'Standard'}</span>
-                        <span className="group-hover:text-purple-400 transition-colors">golf is now ur nose</span>
+                        <span className="group-hover:text-purple-400 transition-colors uppercase">golf is now ur nose</span>
                     </div>
+                    <span className="text-xl">😈</span>
                 </button>
+            </div>
 
+            <div className="absolute bottom-12 left-12 flex flex-col items-start gap-4 z-40">
                 <button
                     onClick={resetPositions}
                     className="bg-white/10 hover:bg-white/20 backdrop-blur-3xl text-white border border-white/10 px-8 py-4 rounded-[2rem] font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-2xl group flex items-center gap-3"
