@@ -23,7 +23,7 @@ type Hole = {
 const FINGER_INDEXES = [8, 12];
 const SIDE_MARGIN = 40;
 const TOP_MARGIN = 0;
-const BOTTOM_WALL = 140;
+const BOTTOM_WALL = 110;
 
 export default function ARGolf() {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -31,7 +31,7 @@ export default function ARGolf() {
     const [score, setScore] = useState(0);
     const [status, setStatus] = useState("Initializing...");
     const [effect, setEffect] = useState<'win' | 'loss' | null>(null);
-    const [holeSpeed, setHoleSpeed] = useState(3);
+    const [holeSpeed, setHoleSpeed] = useState(0);
     const [isStarted, setIsStarted] = useState(false);
 
     const ballsRef = useRef<Ball[]>([]);
@@ -40,9 +40,8 @@ export default function ARGolf() {
 
     const missAudioRef = useRef<HTMLAudioElement | null>(null);
     const winAudioRef = useRef<HTMLAudioElement | null>(null);
-    const fliesRef = useRef<{x: number, y: number, vx: number, vy: number}[]>([]);
-    const windParticlesRef = useRef<{x: number, y: number, speed: number, length: number}[]>([]);
-    const grassEdgesRef = useRef<{ left: number[], right: number[], bottom: number[] }>({ left: [], right: [], bottom: [] });
+    const fliesRef = useRef<{ x: number, y: number, vx: number, vy: number }[]>([]);
+    const windParticlesRef = useRef<{ x: number, y: number, speed: number, length: number }[]>([]);
 
     useEffect(() => {
         let timer: NodeJS.Timeout;
@@ -65,21 +64,14 @@ export default function ARGolf() {
         }));
 
         holeRef.current = { id: 0, x: 400, y: 45, vx: 0, radius: 36 };
-        
+
+        // Initialize flies
         fliesRef.current = Array.from({ length: 20 }, () => ({
             x: Math.random() * 1280,
             y: Math.random() * 720,
             vx: (Math.random() - 0.5) * 2,
             vy: (Math.random() - 0.5) * 2
         }));
-
-        // Cache grass edges (removes rendering jitter)
-        const bladeSize = 8;
-        grassEdgesRef.current = {
-            left: Array.from({ length: Math.ceil(720 / bladeSize) }, () => Math.random() * 10),
-            right: Array.from({ length: Math.ceil(720 / bladeSize) }, () => Math.random() * 10),
-            bottom: Array.from({ length: Math.ceil(1280 / bladeSize) }, () => Math.random() * 12)
-        };
 
         startCamera();
     };
@@ -224,7 +216,7 @@ export default function ARGolf() {
             const dist = Math.hypot(ball.x - hole.x, ball.y - hole.y);
             if (dist < hole.radius) {
                 setScore(s => s + 1);
-                setHoleSpeed(s => s + 2);
+                setHoleSpeed(s => s + 1);
                 setEffect('win');
                 if (winAudioRef.current) { winAudioRef.current.currentTime = 0; winAudioRef.current.play().catch(() => { }); }
                 resetBall(ball, width, height);
@@ -241,12 +233,12 @@ export default function ARGolf() {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const width = canvas.width;
-        
+
         if (holeRef.current) {
             holeRef.current.x = width / 2;
             holeRef.current.vx = 0;
         }
-        
+
         ballsRef.current.forEach(ball => {
             ball.x = width / 2;
             ball.vx = 0;
@@ -262,38 +254,36 @@ export default function ARGolf() {
     const drawGame = (ctx: CanvasRenderingContext2D, width: number, height: number, results: any) => {
         const drawGrassBoundary = (x: number, y: number, w: number, h: number, orientation: 'left' | 'right' | 'bottom') => {
             // Use fixed colors instead of recreating gradients every frame for performance
-            ctx.fillStyle = '#064e3b'; 
+            ctx.fillStyle = '#064e3b';
             ctx.fillRect(x, y, w, h);
 
             // Add a subtle inner darker area with a second fill for depth (faster than gradients)
             ctx.fillStyle = '#14532d';
-            if (orientation === 'bottom') ctx.fillRect(x, y + h/2, w, h/2);
-            else if (orientation === 'left') ctx.fillRect(x, y, w/2, h);
-            else if (orientation === 'right') ctx.fillRect(x + w/2, y, w/2, h);
+            if (orientation === 'bottom') ctx.fillRect(x, y + h / 2, w, h / 2);
+            else if (orientation === 'left') ctx.fillRect(x, y, w / 2, h);
+            else if (orientation === 'right') ctx.fillRect(x + w / 2, y, w / 2, h);
 
-            // Jagged Grass Edge (using cached math for smoothness)
+            // Jagged Grass Edge
             ctx.beginPath();
             ctx.fillStyle = 'rgba(34, 197, 94, 0.5)';
             const bladeSize = 8;
-            const edges = grassEdgesRef.current;
-
             if (orientation === 'left') {
-                edges.left.forEach((offset, i) => {
-                    ctx.lineTo(x + w, i * bladeSize);
-                    ctx.lineTo(x + w + offset, i * bladeSize + bladeSize / 2);
-                });
+                for (let i = 0; i < h; i += bladeSize) {
+                    ctx.lineTo(x + w, i);
+                    ctx.lineTo(x + w + Math.random() * 10, i + bladeSize / 2);
+                }
                 ctx.lineTo(x + w, h); ctx.lineTo(x, h); ctx.lineTo(x, 0);
             } else if (orientation === 'right') {
-                edges.right.forEach((offset, i) => {
-                    ctx.lineTo(x, i * bladeSize);
-                    ctx.lineTo(x - offset, i * bladeSize + bladeSize / 2);
-                });
+                for (let i = 0; i < h; i += bladeSize) {
+                    ctx.lineTo(x, i);
+                    ctx.lineTo(x - Math.random() * 10, i + bladeSize / 2);
+                }
                 ctx.lineTo(x, h); ctx.lineTo(x + w, h); ctx.lineTo(x + w, 0);
             } else if (orientation === 'bottom') {
-                edges.bottom.forEach((offset, i) => {
-                    ctx.lineTo(i * bladeSize, y);
-                    ctx.lineTo(i * bladeSize + bladeSize / 2, y - offset);
-                });
+                for (let i = 0; i < w; i += bladeSize) {
+                    ctx.lineTo(i, y);
+                    ctx.lineTo(i + bladeSize / 2, y - Math.random() * 12);
+                }
                 ctx.lineTo(w, y); ctx.lineTo(w, y + h); ctx.lineTo(0, y + h);
             }
             ctx.fill();
@@ -304,7 +294,7 @@ export default function ARGolf() {
             ctx.strokeStyle = '#666'; ctx.lineWidth = 3;
             ctx.moveTo(x, y); ctx.lineTo(x, y - 60);
             ctx.stroke();
-            
+
             ctx.beginPath();
             ctx.fillStyle = '#ef4444'; // Red Flag
             ctx.moveTo(x, y - 60);
@@ -327,14 +317,14 @@ export default function ARGolf() {
             const overLeft = fly.x < SIDE_MARGIN;
             const overRight = fly.x > width - SIDE_MARGIN;
             const overBottom = fly.y > height - BOTTOM_WALL;
-            
+
             if (overLeft || overRight || overBottom) {
                 // Efficient Fake Glow
                 ctx.beginPath();
                 ctx.arc(fly.x, fly.y, 4, 0, Math.PI * 2);
                 ctx.fillStyle = 'rgba(255, 215, 0, 0.2)'; // Faint outer glow
                 ctx.fill();
-                
+
                 ctx.beginPath();
                 ctx.arc(fly.x, fly.y, 1.5, 0, Math.PI * 2);
                 ctx.fillStyle = '#FFD700'; // Bright inner core
@@ -360,7 +350,7 @@ export default function ARGolf() {
         }
         ballsRef.current.forEach(ball => {
             ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-            ctx.fillStyle = '#FF69B4'; ctx.fill(); 
+            ctx.fillStyle = '#FF69B4'; ctx.fill();
             // Simple stroke instead of shadowBlur for better performance
             ctx.strokeStyle = 'rgba(255, 105, 180, 0.5)'; ctx.lineWidth = 4; ctx.stroke();
         });
@@ -369,10 +359,10 @@ export default function ARGolf() {
                 const tip = results.landmarks[0][idx];
                 const fx = (1 - tip.x) * width;
                 const fy = tip.y * height;
-                
+
                 ctx.beginPath(); ctx.arc(fx, fy, 10, 0, Math.PI * 2);
                 ctx.fillStyle = 'rgba(255, 105, 180, 0.2)'; ctx.fill(); // Outer glow (fake)
-                
+
                 ctx.beginPath(); ctx.arc(fx, fy, 4, 0, Math.PI * 2);
                 ctx.fillStyle = '#FF69B4'; ctx.fill(); // Inner marker
             });
@@ -396,7 +386,7 @@ export default function ARGolf() {
             )}
 
             <div className="absolute bottom-12 left-12 flex flex-col items-start gap-4 z-40">
-                <button 
+                <button
                     onClick={resetPositions}
                     className="bg-white/10 hover:bg-white/20 backdrop-blur-3xl text-white border border-white/10 px-8 py-4 rounded-[2rem] font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-2xl group flex items-center gap-3"
                 >
