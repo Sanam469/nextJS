@@ -45,6 +45,7 @@ export default function ARGolf() {
     const lastTimeRef = useRef(performance.now());
     const ballTrailsRef = useRef<Record<number, { x: number, y: number }[]>>({});
     const markerTrailsRef = useRef<{ x: number, y: number }[]>([]);
+    const stopRenderRef = useRef<(() => void) | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
 
     const missAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -55,6 +56,9 @@ export default function ARGolf() {
 
     useEffect(() => {
         return () => {
+            if (stopRenderRef.current) {
+                stopRenderRef.current();
+            }
             if (streamRef.current) {
                 streamRef.current.getTracks().forEach(track => track.stop());
                 console.log("Camera tracks stopped");
@@ -126,6 +130,61 @@ export default function ARGolf() {
         }
     };
 
+    const renderLoop = () => {
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext('2d', { alpha: false });
+        const video = videoRef.current;
+        if (!canvas || !ctx || !video) return () => { };
+
+        let isRunning = true;
+
+        const render = () => {
+            if (!isRunning) return;
+
+            // Only update width/height if changed to improve performance
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            if (canvas.width !== w || canvas.height !== h) {
+                canvas.width = w;
+                canvas.height = h;
+            }
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            const now = performance.now();
+            // Higher precision for dt calculation
+            const dt = Math.min((now - lastTimeRef.current) / (1000 / 60), 2); 
+            lastTimeRef.current = now;
+
+            let results: any = null;
+            try {
+                if (isHardModeRef.current && faceLandmarkerRef.current) {
+                    results = faceLandmarkerRef.current.detectForVideo(video, now);
+                } else if (handLandmarkerRef.current) {
+                    results = handLandmarkerRef.current.detectForVideo(video, now);
+                }
+            } catch (e) {
+                console.error("AI Detection error:", e);
+            }
+
+            ctx.save();
+            ctx.scale(-1, 1);
+            ctx.translate(-width, 0);
+            ctx.drawImage(video, 0, 0, width, height);
+            ctx.restore();
+
+            updateGame(results, width, height, dt);
+            drawGame(ctx, width, height, results);
+
+            requestAnimationFrame(render);
+        };
+        render();
+
+        return () => {
+            isRunning = false;
+        };
+    };
+
     const initAI = async () => {
         try {
             const vision = await FilesetResolver.forVisionTasks(
@@ -152,55 +211,13 @@ export default function ARGolf() {
             });
 
             setStatus("Ready to Play!");
-            renderLoop();
+            stopRenderRef.current = renderLoop();
         } catch (err) {
             console.error(err);
             setStatus("AI Error");
         }
     };
 
-    const renderLoop = () => {
-        const canvas = canvasRef.current;
-        const ctx = canvas?.getContext('2d', { alpha: false });
-        const video = videoRef.current;
-        if (!canvas || !ctx || !video) return;
-
-        const render = () => {
-            // Only update width/height if changed to improve performance
-            const w = window.innerWidth;
-            const h = window.innerHeight;
-            if (canvas.width !== w || canvas.height !== h) {
-                canvas.width = w;
-                canvas.height = h;
-            }
-            
-            const width = canvas.width;
-            const height = canvas.height;
-            const now = performance.now();
-            // Higher precision for dt calculation
-            const dt = Math.min((now - lastTimeRef.current) / (1000 / 60), 2); 
-            lastTimeRef.current = now;
-
-            let results: any = null;
-            if (isHardModeRef.current && faceLandmarkerRef.current) {
-                results = faceLandmarkerRef.current.detectForVideo(video, now);
-            } else if (handLandmarkerRef.current) {
-                results = handLandmarkerRef.current.detectForVideo(video, now);
-            }
-
-            ctx.save();
-            ctx.scale(-1, 1);
-            ctx.translate(-width, 0);
-            ctx.drawImage(video, 0, 0, width, height);
-            ctx.restore();
-
-            updateGame(results, width, height, dt);
-            drawGame(ctx, width, height, results);
-
-            requestAnimationFrame(render);
-        };
-        render();
-    };
 
     useEffect(() => {
         if (holeRef.current) {

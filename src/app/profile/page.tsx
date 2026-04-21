@@ -15,13 +15,16 @@ export default function ProfilePage() {
     })
 
     const [showDetails, setShowDetails] = useState(false)
+    const [isLoggingOut, setIsLoggingOut] = useState(false)
 
     const logout = async () => {
         try {
+            setIsLoggingOut(true)
             await axios.get('/api/users/logout')
             toast.success('Logout successful')
             router.push('/login')
         } catch (error:any) {
+            setIsLoggingOut(false)
             console.log(error.message);
             toast.error(error.message)
         }
@@ -124,7 +127,7 @@ export default function ProfilePage() {
                 )}
 
                 <div className="absolute inset-0 w-full h-full">
-                    <ARGolf />
+                    {!isLoggingOut && <ARGolf />}
                 </div>
             </main>
         </div>
