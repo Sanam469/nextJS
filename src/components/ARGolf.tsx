@@ -166,12 +166,19 @@ export default function ARGolf() {
         if (!canvas || !ctx || !video) return;
 
         const render = () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            // Only update width/height if changed to improve performance
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            if (canvas.width !== w || canvas.height !== h) {
+                canvas.width = w;
+                canvas.height = h;
+            }
+            
             const width = canvas.width;
             const height = canvas.height;
             const now = performance.now();
-            const dt = Math.min((now - lastTimeRef.current) / (1000 / 60), 3); // Normalize to 60fps, cap at 3
+            // Higher precision for dt calculation
+            const dt = Math.min((now - lastTimeRef.current) / (1000 / 60), 2); 
             lastTimeRef.current = now;
 
             let results: any = null;
@@ -207,8 +214,18 @@ export default function ARGolf() {
         if (!hole || !results) return;
 
         hole.x += hole.vx * dt;
-        // Turn around earlier on the right to avoid getting stuck behind the Score Card
-        if (hole.x > width - SIDE_MARGIN - 180 || hole.x < SIDE_MARGIN + 60) hole.vx *= -1;
+        
+        // Dynamic turnaround limits: allow full edge movement on mobile (width < 640)
+        const marginR = width < 640 ? SIDE_MARGIN + hole.radius : SIDE_MARGIN + 180;
+        const marginL = width < 640 ? SIDE_MARGIN + hole.radius : SIDE_MARGIN + 60;
+        
+        if (hole.x > width - marginR) {
+            hole.x = width - marginR;
+            hole.vx *= -1;
+        } else if (hole.x < marginL) {
+            hole.x = marginL;
+            hole.vx *= -1;
+        }
 
         const isHard = isHardModeRef.current;
 
