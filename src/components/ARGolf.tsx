@@ -31,7 +31,7 @@ export default function ARGolf() {
     const [score, setScore] = useState(0);
     const [status, setStatus] = useState("Initializing...");
     const [effect, setEffect] = useState<'win' | 'loss' | null>(null);
-    const [holeSpeed, setHoleSpeed] = useState(0);
+    const [holeSpeed, setHoleSpeed] = useState(3);
     const [isStarted, setIsStarted] = useState(false);
 
     const ballsRef = useRef<Ball[]>([]);
@@ -42,6 +42,7 @@ export default function ARGolf() {
     const winAudioRef = useRef<HTMLAudioElement | null>(null);
     const fliesRef = useRef<{x: number, y: number, vx: number, vy: number}[]>([]);
     const windParticlesRef = useRef<{x: number, y: number, speed: number, length: number}[]>([]);
+    const grassEdgesRef = useRef<{ left: number[], right: number[], bottom: number[] }>({ left: [], right: [], bottom: [] });
 
     useEffect(() => {
         let timer: NodeJS.Timeout;
@@ -65,13 +66,20 @@ export default function ARGolf() {
 
         holeRef.current = { id: 0, x: 400, y: 45, vx: 0, radius: 36 };
         
-        // Initialize flies
         fliesRef.current = Array.from({ length: 20 }, () => ({
             x: Math.random() * 1280,
             y: Math.random() * 720,
             vx: (Math.random() - 0.5) * 2,
             vy: (Math.random() - 0.5) * 2
         }));
+
+        // Cache grass edges (removes rendering jitter)
+        const bladeSize = 8;
+        grassEdgesRef.current = {
+            left: Array.from({ length: Math.ceil(720 / bladeSize) }, () => Math.random() * 10),
+            right: Array.from({ length: Math.ceil(720 / bladeSize) }, () => Math.random() * 10),
+            bottom: Array.from({ length: Math.ceil(1280 / bladeSize) }, () => Math.random() * 12)
+        };
 
         startCamera();
     };
@@ -216,7 +224,7 @@ export default function ARGolf() {
             const dist = Math.hypot(ball.x - hole.x, ball.y - hole.y);
             if (dist < hole.radius) {
                 setScore(s => s + 1);
-                setHoleSpeed(s => s + 1);
+                setHoleSpeed(s => s + 2);
                 setEffect('win');
                 if (winAudioRef.current) { winAudioRef.current.currentTime = 0; winAudioRef.current.play().catch(() => { }); }
                 resetBall(ball, width, height);
@@ -263,27 +271,29 @@ export default function ARGolf() {
             else if (orientation === 'left') ctx.fillRect(x, y, w/2, h);
             else if (orientation === 'right') ctx.fillRect(x + w/2, y, w/2, h);
 
-            // Jagged Grass Edge
+            // Jagged Grass Edge (using cached math for smoothness)
             ctx.beginPath();
             ctx.fillStyle = 'rgba(34, 197, 94, 0.5)';
             const bladeSize = 8;
+            const edges = grassEdgesRef.current;
+
             if (orientation === 'left') {
-                for (let i = 0; i < h; i += bladeSize) {
-                    ctx.lineTo(x + w, i);
-                    ctx.lineTo(x + w + Math.random() * 10, i + bladeSize / 2);
-                }
+                edges.left.forEach((offset, i) => {
+                    ctx.lineTo(x + w, i * bladeSize);
+                    ctx.lineTo(x + w + offset, i * bladeSize + bladeSize / 2);
+                });
                 ctx.lineTo(x + w, h); ctx.lineTo(x, h); ctx.lineTo(x, 0);
             } else if (orientation === 'right') {
-                for (let i = 0; i < h; i += bladeSize) {
-                    ctx.lineTo(x, i);
-                    ctx.lineTo(x - Math.random() * 10, i + bladeSize / 2);
-                }
+                edges.right.forEach((offset, i) => {
+                    ctx.lineTo(x, i * bladeSize);
+                    ctx.lineTo(x - offset, i * bladeSize + bladeSize / 2);
+                });
                 ctx.lineTo(x, h); ctx.lineTo(x + w, h); ctx.lineTo(x + w, 0);
             } else if (orientation === 'bottom') {
-                for (let i = 0; i < w; i += bladeSize) {
-                    ctx.lineTo(i, y);
-                    ctx.lineTo(i + bladeSize / 2, y - Math.random() * 12);
-                }
+                edges.bottom.forEach((offset, i) => {
+                    ctx.lineTo(i * bladeSize, y);
+                    ctx.lineTo(i * bladeSize + bladeSize / 2, y - offset);
+                });
                 ctx.lineTo(w, y); ctx.lineTo(w, y + h); ctx.lineTo(0, y + h);
             }
             ctx.fill();
