@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { FilesetResolver, HandLandmarker } from "@mediapipe/tasks-vision";
+import { FilesetResolver, HandLandmarker, FaceLandmarker } from "@mediapipe/tasks-vision";
 
 type Ball = {
     id: number;
@@ -33,10 +33,14 @@ export default function ARGolf() {
     const [effect, setEffect] = useState<'win' | 'loss' | null>(null);
     const [holeSpeed, setHoleSpeed] = useState(0);
     const [isStarted, setIsStarted] = useState(false);
+    const [isHardMode, setIsHardMode] = useState(false);
 
     const ballsRef = useRef<Ball[]>([]);
     const holeRef = useRef<Hole | null>(null);
     const fingersRef = useRef<Record<number, { x: number, y: number, vx: number, vy: number }>>({});
+    const noseRef = useRef<{ x: number, y: number, vx: number, vy: number } | null>(null);
+    const faceLandmarkerRef = useRef<FaceLandmarker | null>(null);
+    const handLandmarkerRef = useRef<HandLandmarker | null>(null);
 
     const missAudioRef = useRef<HTMLAudioElement | null>(null);
     const winAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -95,7 +99,9 @@ export default function ARGolf() {
             const vision = await FilesetResolver.forVisionTasks(
                 "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
             );
-            const handLandmarker = await HandLandmarker.createFromOptions(vision, {
+            
+            // Hand Landmarker (Standard)
+            handLandmarkerRef.current = await HandLandmarker.createFromOptions(vision, {
                 baseOptions: {
                     modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
                     delegate: "GPU"
@@ -103,23 +109,41 @@ export default function ARGolf() {
                 runningMode: "VIDEO",
                 numHands: 1
             });
+
+            // Face Landmarker (Hard Mode)
+            faceLandmarkerRef.current = await FaceLandmarker.createFromOptions(vision, {
+                baseOptions: {
+                    modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
+                    delegate: "GPU"
+                },
+                runningMode: "VIDEO"
+            });
+
             setStatus("Ready to Play!");
-            renderLoop(handLandmarker);
+            renderLoop();
         } catch (err) {
+            console.error(err);
             setStatus("AI Error");
         }
     };
 
-    const renderLoop = (handLandmarker: HandLandmarker) => {
+    const renderLoop = () => {
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext('2d');
         const video = videoRef.current;
         if (!canvas || !ctx || !video) return;
 
         const render = () => {
-            const results = handLandmarker.detectForVideo(video, performance.now());
             const width = canvas.width;
             const height = canvas.height;
+            const now = performance.now();
+
+            let results: any = null;
+            if (isHardMode && faceLandmarkerRef.current) {
+                results = faceLandmarkerRef.current.detectForVideo(video, now);
+            } else if (handLandmarkerRef.current) {
+                results = handLandmarkerRef.current.detectForVideo(video, now);
+            }
 
             ctx.save();
             ctx.scale(-1, 1);
@@ -181,9 +205,25 @@ export default function ARGolf() {
             if (p.x > width + p.length) windParticlesRef.current.splice(idx, 1);
         });
 
-        if (results.landmarks && results.landmarks[0]) {
+        if (isHardMode && results.faceLandmarks && results.faceLandmarks[0]) {
+            const nose = results.faceLandmarks[0][1]; // Nose Tip center
+            const nx = (1 - nose.x) * width;
+            const ny = nose.y * height;
+            
+            const prev = noseRef.current || { x: nx, y: ny, vx: 0, vy: 0 };
+            const dx = nx - prev.x;
+            const dy = ny - prev.y;
+            noseRef.current = { x: nx, y: ny, vx: dx, vy: dy };
+
+            ballsRef.current.forEach(ball => {
+                const dist = Math.hypot(ball.x - nx, ball.y - ny);
+                if (dist < ball.radius + 40 && Math.hypot(dx, dy) > 1) {
+                    ball.vx = dx * 2.2; // Extra punch for nose mode
+                    ball.vy = dy * 2.2;
+                }
+            });
+        } else if (!isHardMode && results.landmarks && results.landmarks[0]) {
             const landmarks = results.landmarks[0];
-            // ... (rest of finger logic remains same)
             FINGER_INDEXES.forEach(idx => {
                 const landmark = landmarks[idx];
                 const fx = (1 - landmark.x) * width;
@@ -362,7 +402,17 @@ export default function ARGolf() {
             // Simple stroke instead of shadowBlur for better performance
             ctx.strokeStyle = 'rgba(255, 105, 180, 0.5)'; ctx.lineWidth = 4; ctx.stroke();
         });
-        if (results.landmarks && results.landmarks[0]) {
+        if (isHardMode && results.faceLandmarks && results.faceLandmarks[0]) {
+            const nose = results.faceLandmarks[0][1];
+            const nx = (1 - nose.x) * width;
+            const ny = nose.y * height;
+            
+            ctx.beginPath(); ctx.arc(nx, ny, 15, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 105, 180, 0.3)'; ctx.fill(); 
+            
+            ctx.beginPath(); ctx.arc(nx, ny, 6, 0, Math.PI * 2);
+            ctx.fillStyle = '#FF69B4'; ctx.fill(); 
+        } else if (!isHardMode && results.landmarks && results.landmarks[0]) {
             FINGER_INDEXES.forEach(idx => {
                 const tip = results.landmarks[0][idx];
                 const fx = (1 - tip.x) * width;
@@ -394,6 +444,17 @@ export default function ARGolf() {
             )}
 
             <div className="absolute bottom-12 left-12 flex flex-col items-start gap-4 z-40">
+                <button 
+                    onClick={() => setIsHardMode(!isHardMode)}
+                    className="group bg-black/60 hover:bg-black/80 backdrop-blur-3xl text-white border border-white/20 px-8 py-5 rounded-[2rem] font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-2xl flex items-center gap-4 border-r-4 border-r-purple-500"
+                >
+                    <span className="text-xl">😈</span>
+                    <div className="flex flex-col items-start text-left">
+                        <span className="opacity-40 text-[8px] tracking-[0.3em]">Difficulty: {isHardMode ? 'Insane' : 'Standard'}</span>
+                        <span className="group-hover:text-purple-400 transition-colors">golf is now ur nose</span>
+                    </div>
+                </button>
+
                 <button
                     onClick={resetPositions}
                     className="bg-white/10 hover:bg-white/20 backdrop-blur-3xl text-white border border-white/10 px-8 py-4 rounded-[2rem] font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-2xl group flex items-center gap-3"
