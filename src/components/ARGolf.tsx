@@ -41,6 +41,7 @@ export default function ARGolf() {
     const noseRef = useRef<{ x: number, y: number, vx: number, vy: number } | null>(null);
     const faceLandmarkerRef = useRef<FaceLandmarker | null>(null);
     const handLandmarkerRef = useRef<HandLandmarker | null>(null);
+    const isHardModeRef = useRef(false);
 
     const missAudioRef = useRef<HTMLAudioElement | null>(null);
     const winAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -139,7 +140,7 @@ export default function ARGolf() {
             const now = performance.now();
 
             let results: any = null;
-            if (isHardMode && faceLandmarkerRef.current) {
+            if (isHardModeRef.current && faceLandmarkerRef.current) {
                 results = faceLandmarkerRef.current.detectForVideo(video, now);
             } else if (handLandmarkerRef.current) {
                 results = handLandmarkerRef.current.detectForVideo(video, now);
@@ -173,6 +174,8 @@ export default function ARGolf() {
         hole.x += hole.vx;
         if (hole.x > width - SIDE_MARGIN - 60 || hole.x < SIDE_MARGIN + 60) hole.vx *= -1;
 
+        const isHard = isHardModeRef.current;
+
         // Update flies
         fliesRef.current.forEach(fly => {
             fly.x += fly.vx;
@@ -205,7 +208,7 @@ export default function ARGolf() {
             if (p.x > width + p.length) windParticlesRef.current.splice(idx, 1);
         });
 
-        if (isHardMode && results.faceLandmarks && results.faceLandmarks[0]) {
+        if (isHard && results.faceLandmarks && results.faceLandmarks[0]) {
             const nose = results.faceLandmarks[0][1]; // Nose Tip center
             const nx = (1 - nose.x) * width;
             const ny = nose.y * height;
@@ -222,7 +225,7 @@ export default function ARGolf() {
                     ball.vy = dy * 2.2;
                 }
             });
-        } else if (!isHardMode && results.landmarks && results.landmarks[0]) {
+        } else if (!isHard && results.landmarks && results.landmarks[0]) {
             const landmarks = results.landmarks[0];
             FINGER_INDEXES.forEach(idx => {
                 const landmark = landmarks[idx];
@@ -402,7 +405,9 @@ export default function ARGolf() {
             // Simple stroke instead of shadowBlur for better performance
             ctx.strokeStyle = 'rgba(255, 105, 180, 0.5)'; ctx.lineWidth = 4; ctx.stroke();
         });
-        if (isHardMode && results.faceLandmarks && results.faceLandmarks[0]) {
+        const isHard = isHardModeRef.current;
+
+        if (isHard && results.faceLandmarks && results.faceLandmarks[0]) {
             const nose = results.faceLandmarks[0][1];
             const nx = (1 - nose.x) * width;
             const ny = nose.y * height;
@@ -412,7 +417,7 @@ export default function ARGolf() {
             
             ctx.beginPath(); ctx.arc(nx, ny, 6, 0, Math.PI * 2);
             ctx.fillStyle = '#FF69B4'; ctx.fill(); 
-        } else if (!isHardMode && results.landmarks && results.landmarks[0]) {
+        } else if (!isHard && results.landmarks && results.landmarks[0]) {
             FINGER_INDEXES.forEach(idx => {
                 const tip = results.landmarks[0][idx];
                 const fx = (1 - tip.x) * width;
@@ -445,7 +450,11 @@ export default function ARGolf() {
 
             <div className="absolute bottom-12 right-12 flex flex-col items-end gap-4 z-40">
                 <button 
-                    onClick={() => setIsHardMode(!isHardMode)}
+                    onClick={() => {
+                        const next = !isHardMode;
+                        setIsHardMode(next);
+                        isHardModeRef.current = next;
+                    }}
                     className="group bg-black/60 hover:bg-black/80 backdrop-blur-3xl text-white border border-white/20 px-8 py-5 rounded-[2rem] font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-2xl flex items-center gap-4 border-l-4 border-l-purple-500"
                 >
                     <div className="flex flex-col items-end text-right">
