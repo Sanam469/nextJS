@@ -47,11 +47,11 @@ export default function ProfilePage() {
 
                     <button 
                         onClick={logout}
-                        className="p-3 rounded-xl hover:bg-white/10 transition-all group relative"
+                        className="p-3 rounded-xl hover:bg-red-500/10 transition-all group relative"
                         title="Logout"
                     >
-                        <svg className="w-5 h-5 text-white/20 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                        <span className="absolute left-full ml-4 px-2 py-1 bg-white text-black text-[9px] font-black rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity tracking-widest uppercase">Exit</span>
+                        <svg className="w-5 h-5 text-white/20 group-hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        <span className="absolute left-full ml-4 px-2 py-1 bg-red-500 text-white text-[9px] font-black rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity tracking-widest uppercase">Exit</span>
                     </button>
                 </nav>
 
@@ -67,7 +67,7 @@ export default function ProfilePage() {
                     <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-3">
                             <h1 className="text-4xl font-black tracking-tighter uppercase italic text-white/90">AR Golf</h1>
-                            <div className="px-2 py-0.5 bg-white text-black text-[8px] font-black rounded uppercase tracking-widest shadow-xl">Secure</div>
+                            <div className="px-2 py-0.5 bg-green-500 text-black text-[8px] font-black rounded uppercase tracking-widest shadow-xl">Active</div>
                         </div>
                         <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.5em]">Real-time Spatial Tracker</p>
                     </div>

@@ -253,19 +253,19 @@ export default function ARGolf() {
 
     const drawGame = (ctx: CanvasRenderingContext2D, width: number, height: number, results: any) => {
         const drawGrassBoundary = (x: number, y: number, w: number, h: number, orientation: 'left' | 'right' | 'bottom') => {
-            // Strictly monochrome grass tones
-            ctx.fillStyle = '#121212'; 
+            // Use fixed colors instead of recreating gradients every frame for performance
+            ctx.fillStyle = '#064e3b'; 
             ctx.fillRect(x, y, w, h);
 
-            // Subtle depth shift still in grayscale
-            ctx.fillStyle = '#1a1a1a';
+            // Add a subtle inner darker area with a second fill for depth (faster than gradients)
+            ctx.fillStyle = '#14532d';
             if (orientation === 'bottom') ctx.fillRect(x, y + h/2, w, h/2);
             else if (orientation === 'left') ctx.fillRect(x, y, w/2, h);
             else if (orientation === 'right') ctx.fillRect(x + w/2, y, w/2, h);
 
-            // Monochrome edge
+            // Jagged Grass Edge
             ctx.beginPath();
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.fillStyle = 'rgba(34, 197, 94, 0.5)';
             const bladeSize = 8;
             if (orientation === 'left') {
                 for (let i = 0; i < h; i += bladeSize) {
@@ -291,19 +291,16 @@ export default function ARGolf() {
 
         const drawFlag = (x: number, y: number) => {
             ctx.beginPath();
-            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; // White pole
+            ctx.strokeStyle = '#666'; ctx.lineWidth = 3;
             ctx.moveTo(x, y); ctx.lineTo(x, y - 60);
             ctx.stroke();
             
             ctx.beginPath();
-            ctx.fillStyle = '#ffffff'; // White Flag
+            ctx.fillStyle = '#ef4444'; // Red Flag
             ctx.moveTo(x, y - 60);
             ctx.lineTo(x + 25, y - 45);
             ctx.lineTo(x, y - 30);
             ctx.fill();
-            
-            // Add a black border to the white flag for contrast
-            ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
         };
 
         // Draw Grass Walls
@@ -322,15 +319,15 @@ export default function ARGolf() {
             const overBottom = fly.y > height - BOTTOM_WALL;
             
             if (overLeft || overRight || overBottom) {
-                // Monochrome Fireflies (Stars)
+                // Efficient Fake Glow
                 ctx.beginPath();
                 ctx.arc(fly.x, fly.y, 4, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; // Faint white glow
+                ctx.fillStyle = 'rgba(255, 215, 0, 0.2)'; // Faint outer glow
                 ctx.fill();
                 
                 ctx.beginPath();
                 ctx.arc(fly.x, fly.y, 1.5, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffffff'; // White core
+                ctx.fillStyle = '#FFD700'; // Bright inner core
                 ctx.fill();
             }
         });
@@ -353,9 +350,9 @@ export default function ARGolf() {
         }
         ballsRef.current.forEach(ball => {
             ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-            ctx.fillStyle = '#ffffff'; ctx.fill(); // White Ball
-            
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; ctx.lineWidth = 4; ctx.stroke();
+            ctx.fillStyle = '#FF69B4'; ctx.fill(); 
+            // Simple stroke instead of shadowBlur for better performance
+            ctx.strokeStyle = 'rgba(255, 105, 180, 0.5)'; ctx.lineWidth = 4; ctx.stroke();
         });
         if (results.landmarks && results.landmarks[0]) {
             FINGER_INDEXES.forEach(idx => {
@@ -364,10 +361,10 @@ export default function ARGolf() {
                 const fy = tip.y * height;
                 
                 ctx.beginPath(); ctx.arc(fx, fy, 10, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; ctx.fill(); // Subtle white glow
+                ctx.fillStyle = 'rgba(255, 105, 180, 0.2)'; ctx.fill(); // Outer glow (fake)
                 
                 ctx.beginPath(); ctx.arc(fx, fy, 4, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffffff'; ctx.fill(); // White Inner marker
+                ctx.fillStyle = '#FF69B4'; ctx.fill(); // Inner marker
             });
         }
     };
@@ -408,8 +405,8 @@ export default function ARGolf() {
             {effect && (
                 <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/20 backdrop-blur-lg pointer-events-none">
                     <div className="flex flex-col items-center gap-8 animate-in zoom-in slide-in-from-bottom-20 duration-500">
-                        <div className="text-[8rem] sm:text-[12rem] font-black text-white/10 select-none">
-                            {effect === 'win' ? "GOAL" : "MISS"}
+                        <div className="text-[16rem] sm:text-[22rem] drop-shadow-[0_0_100px_rgba(255,255,255,0.3)]">
+                            {effect === 'win' ? "🔥" : "🤫"}
                         </div>
                         <div className="text-white text-5xl font-black uppercase tracking-[1.5rem] italic drop-shadow-2xl">
                             {effect === 'win' ? "LESSGO!" : "NOOB!!"}
