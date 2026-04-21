@@ -42,6 +42,7 @@ export default function ARGolf() {
     const faceLandmarkerRef = useRef<FaceLandmarker | null>(null);
     const handLandmarkerRef = useRef<HandLandmarker | null>(null);
     const isHardModeRef = useRef(false);
+    const lastTimeRef = useRef(performance.now());
     const ballTrailsRef = useRef<Record<number, {x: number, y: number}[]>>({});
     const markerTrailsRef = useRef<{x: number, y: number}[]>([]);
 
@@ -148,6 +149,8 @@ export default function ARGolf() {
             const width = canvas.width;
             const height = canvas.height;
             const now = performance.now();
+            const dt = Math.min((now - lastTimeRef.current) / (1000 / 60), 3); // Normalize to 60fps, cap at 3
+            lastTimeRef.current = now;
 
             let results: any = null;
             if (isHardModeRef.current && faceLandmarkerRef.current) {
@@ -162,7 +165,7 @@ export default function ARGolf() {
             ctx.drawImage(video, 0, 0, width, height);
             ctx.restore();
 
-            updateGame(results, width, height);
+            updateGame(results, width, height, dt);
             drawGame(ctx, width, height, results);
 
             requestAnimationFrame(render);
@@ -177,19 +180,19 @@ export default function ARGolf() {
         }
     }, [holeSpeed]);
 
-    const updateGame = (results: any, width: number, height: number) => {
+    const updateGame = (results: any, width: number, height: number, dt: number) => {
         const hole = holeRef.current;
         if (!hole || !results) return;
 
-        hole.x += hole.vx;
+        hole.x += hole.vx * dt;
         if (hole.x > width - SIDE_MARGIN - 60 || hole.x < SIDE_MARGIN + 60) hole.vx *= -1;
 
         const isHard = isHardModeRef.current;
 
         // Update flies
         fliesRef.current.forEach(fly => {
-            fly.x += fly.vx;
-            fly.y += fly.vy;
+            fly.x += fly.vx * dt;
+            fly.y += fly.vy * dt;
             if (fly.x < 0 || fly.x > width) fly.vx *= -1;
             if (fly.y < 0 || fly.y > height) fly.vy *= -1;
             if (Math.random() > 0.95) {
@@ -200,9 +203,8 @@ export default function ARGolf() {
 
         // Wind/Air effect logic
         const now = performance.now();
-        const cycle = 10000; // 10 seconds
-        const activeDuration = 2500; // Blowing for 2.5 seconds
-        const isBlowing = (now % cycle) < activeDuration;
+        const cycle = 10000; 
+        const isBlowing = (now % cycle) < 2500;
 
         if (isBlowing && windParticlesRef.current.length < 30) {
             windParticlesRef.current.push({
@@ -214,16 +216,20 @@ export default function ARGolf() {
         }
 
         windParticlesRef.current.forEach((p, idx) => {
-            p.x += p.speed;
+            p.x += p.speed * dt;
             if (p.x > width + p.length) windParticlesRef.current.splice(idx, 1);
         });
 
         if (isHard && results.faceLandmarks && results.faceLandmarks[0]) {
-            const nose = results.faceLandmarks[0][1]; // Nose Tip center
-            const nx = (1 - nose.x) * width;
-            const ny = nose.y * height;
+            const nose = results.faceLandmarks[0][1];
+            const nxRaw = (1 - nose.x) * width;
+            const nyRaw = nose.y * height;
             
-            const prev = noseRef.current || { x: nx, y: ny, vx: 0, vy: 0 };
+            // Lerp smoothing (0.4 factor)
+            const prev = noseRef.current || { x: nxRaw, y: nyRaw, vx: 0, vy: 0 };
+            const nx = prev.x + (nxRaw - prev.x) * 0.4;
+            const ny = prev.y + (nyRaw - prev.y) * 0.4;
+
             const dx = nx - prev.x;
             const dy = ny - prev.y;
             noseRef.current = { x: nx, y: ny, vx: dx, vy: dy };
@@ -231,7 +237,7 @@ export default function ARGolf() {
             ballsRef.current.forEach(ball => {
                 const dist = Math.hypot(ball.x - nx, ball.y - ny);
                 if (dist < ball.radius + 20 && Math.hypot(dx, dy) > 1) {
-                    ball.vx = dx * 2.2; // Extra punch for nose mode
+                    ball.vx = dx * 2.2;
                     ball.vy = dy * 2.2;
                 }
             });
@@ -239,9 +245,14 @@ export default function ARGolf() {
             const landmarks = results.landmarks[0];
             FINGER_INDEXES.forEach(idx => {
                 const landmark = landmarks[idx];
-                const fx = (1 - landmark.x) * width;
-                const fy = landmark.y * height;
-                const prev = fingersRef.current[idx] || { x: fx, y: fy, vx: 0, vy: 0 };
+                const fxRaw = (1 - landmark.x) * width;
+                const fyRaw = landmark.y * height;
+                
+                const prev = fingersRef.current[idx] || { x: fxRaw, y: fyRaw, vx: 0, vy: 0 };
+                // Lerp smoothing
+                const fx = prev.x + (fxRaw - prev.x) * 0.4;
+                const fy = prev.y + (fyRaw - prev.y) * 0.4;
+                
                 const dx = fx - prev.x;
                 const dy = fy - prev.y;
                 fingersRef.current[idx] = { x: fx, y: fy, vx: dx, vy: dy };
@@ -257,10 +268,10 @@ export default function ARGolf() {
         }
 
         ballsRef.current.forEach(ball => {
-            ball.vx *= 0.985;
-            ball.vy *= 0.985;
-            ball.x += ball.vx;
-            ball.y += ball.vy;
+            ball.vx *= Math.pow(0.985, dt);
+            ball.vy *= Math.pow(0.985, dt);
+            ball.x += ball.vx * dt;
+            ball.y += ball.vy * dt;
 
             // Store trails for smoothness
             const trail = ballTrailsRef.current[ball.id] || [];
