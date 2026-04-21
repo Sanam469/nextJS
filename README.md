@@ -1,86 +1,45 @@
-My first Full Stack project
+# A detailed course to undestand nextjs
 
-🔐 Secure Auth Dashboard (Next.js)
+This long video was designed to give you an indepth understanding about latest nextjs and how it works. 
 
-A modern authentication system built with Next.js App Router, focusing on clean architecture, performance, and premium UI/UX.
+## Tech Stack
+- Nextjs
+- typescript
+- mongodb
+- mailtrap
 
-🚀 Workflow:
+![Course Image](./nextjs.png)
 
-Signup
+---
+Available on my youtube channel
+[Youtube channel link](https://www.youtube.com/@HiteshChoudharydotcom)
 
-Client Component
+## Getting Started
 
-Controlled form state
+First, run the development server:
 
-User registers via /api/users/signup
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+```
+## Assignment
+1. Improve the UI of the application
+2. Add feature of forgot password
 
-Login
+---
+### Hint:
+For forgot password feature.
+1. User needs a page to enter his email and submit.
+2. Validate if user exists, if yes, send him same token email that we discussed in this course
+3. User clicks on email and get a page to enter new password with a submit button.
+4. As soon as he click submit button, he is sending you a token and new password.
+5. Verify the token and save the new password after encrypting it.
 
-Client Component
+---
+## your completed assignments
 
-Authenticates via /api/users/login
-
-Session established → redirect to dashboard
-
-Dashboard (/profile)
-
-Client Component
-
-Secure logout
-
-Fetches user data from /api/users/me
-
-Skeleton loaders + smooth interactions
-
-User Profile (/profile/[id])
-
-Server Component
-
-Async route params handled correctly
-
-Zero client-only code
-
-Tailwind-only animations (App Router safe)
-
-🧠 Architecture Flex
-
-Correct Server vs Client Component separation
-
-No styled-jsx in Server Components
-
-No unnecessary "use client"
-
-GPU-safe animations only
-
-Clean, scalable structure
-
-🎨 UI / UX Flex
-
-Dark, premium design system
-
-Subtle motion, no cartoon effects
-
-Intentional empty states
-
-Smooth page and element transitions
-
-🛠 Tech Stack
-
-Next.js (App Router)
-
-React + TypeScript
-
-Tailwind CSS
-
-Axios
-
-React Hot Toast
-
-🏁 TL;DR
-
-Looks expensive.
-Feels smooth.
-Architected properly.
-
-Not a demo.
-Built like a real product. 🖤
+- Add your repo link here
+- 
