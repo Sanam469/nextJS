@@ -21,9 +21,8 @@ type Hole = {
 };
 
 const FINGER_INDEXES = [8, 12];
-const SIDE_MARGIN = 40;
-const TOP_MARGIN = 0;
-const BOTTOM_WALL = 110;
+const SIDE_MARGIN = 12; // "Very thin"
+const BOTTOM_WALL = 180; // "A bit wide"
 
 export default function ARGolf() {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -35,6 +34,7 @@ export default function ARGolf() {
     const [isStarted, setIsStarted] = useState(false);
     const [isHardMode, setIsHardMode] = useState(false);
 
+    const scoreRef = useRef(0);
     const ballsRef = useRef<Ball[]>([]);
     const holeRef = useRef<Hole | null>(null);
     const fingersRef = useRef<Record<number, { x: number, y: number, vx: number, vy: number }>>({});
@@ -43,14 +43,24 @@ export default function ARGolf() {
     const handLandmarkerRef = useRef<HandLandmarker | null>(null);
     const isHardModeRef = useRef(false);
     const lastTimeRef = useRef(performance.now());
-    const ballTrailsRef = useRef<Record<number, {x: number, y: number}[]>>({});
-    const markerTrailsRef = useRef<{x: number, y: number}[]>([]);
+    const ballTrailsRef = useRef<Record<number, { x: number, y: number }[]>>({});
+    const markerTrailsRef = useRef<{ x: number, y: number }[]>([]);
+    const streamRef = useRef<MediaStream | null>(null);
 
     const missAudioRef = useRef<HTMLAudioElement | null>(null);
     const winAudioRef = useRef<HTMLAudioElement | null>(null);
     const fliesRef = useRef<{ x: number, y: number, vx: number, vy: number }[]>([]);
     const windParticlesRef = useRef<{ x: number, y: number, speed: number, length: number }[]>([]);
     const grassEdgesRef = useRef<{ left: number[], right: number[], bottom: number[] }>({ left: [], right: [], bottom: [] });
+
+    useEffect(() => {
+        return () => {
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+                console.log("Camera tracks stopped");
+            }
+        };
+    }, []);
 
     useEffect(() => {
         let timer: NodeJS.Timeout;
@@ -63,16 +73,21 @@ export default function ARGolf() {
     const initializeGame = async () => {
         setIsStarted(true);
         setStatus("Starting...");
+        scoreRef.current = 0;
+        setScore(0);
         missAudioRef.current = new Audio("/sounds/fahh.mp3");
         winAudioRef.current = new Audio("/sounds/ooh.mp3");
         missAudioRef.current.load();
         winAudioRef.current.load();
 
-        ballsRef.current = Array.from({ length: 3 }, (_, i) => ({
-            id: i, x: 400, y: 300, vx: 0, vy: 0, radius: 12
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+
+        ballsRef.current = Array.from({ length: 1 }, (_, i) => ({
+            id: i, x: w / 2, y: h / 2, vx: 0, vy: 0, radius: 12
         }));
 
-        holeRef.current = { id: 0, x: 400, y: 45, vx: 0, radius: 36 };
+        holeRef.current = { id: 0, x: w / 2, y: h * 0.12, vx: 0, radius: 36 };
 
         // Initialize flies
         fliesRef.current = Array.from({ length: 20 }, () => ({
@@ -95,8 +110,13 @@ export default function ARGolf() {
     const startCamera = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { width: 1280, height: 720 }
+                video: { 
+                    width: { ideal: 1280 }, 
+                    height: { ideal: 720 },
+                    facingMode: "user"
+                }
             });
+            streamRef.current = stream;
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
                 videoRef.current.onloadedmetadata = () => initAI();
@@ -111,7 +131,7 @@ export default function ARGolf() {
             const vision = await FilesetResolver.forVisionTasks(
                 "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
             );
-            
+
             // Hand Landmarker (Standard)
             handLandmarkerRef.current = await HandLandmarker.createFromOptions(vision, {
                 baseOptions: {
@@ -141,11 +161,13 @@ export default function ARGolf() {
 
     const renderLoop = () => {
         const canvas = canvasRef.current;
-        const ctx = canvas?.getContext('2d');
+        const ctx = canvas?.getContext('2d', { alpha: false });
         const video = videoRef.current;
         if (!canvas || !ctx || !video) return;
 
         const render = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
             const width = canvas.width;
             const height = canvas.height;
             const now = performance.now();
@@ -185,7 +207,8 @@ export default function ARGolf() {
         if (!hole || !results) return;
 
         hole.x += hole.vx * dt;
-        if (hole.x > width - SIDE_MARGIN - 60 || hole.x < SIDE_MARGIN + 60) hole.vx *= -1;
+        // Turn around earlier on the right to avoid getting stuck behind the Score Card
+        if (hole.x > width - SIDE_MARGIN - 180 || hole.x < SIDE_MARGIN + 60) hole.vx *= -1;
 
         const isHard = isHardModeRef.current;
 
@@ -203,7 +226,7 @@ export default function ARGolf() {
 
         // Wind/Air effect logic
         const now = performance.now();
-        const cycle = 10000; 
+        const cycle = 10000;
         const isBlowing = (now % cycle) < 2500;
 
         if (isBlowing && windParticlesRef.current.length < 30) {
@@ -225,7 +248,7 @@ export default function ARGolf() {
             const nose = landmarks[1]; // Nose Tip center
             const nxRaw = (1 - nose.x) * width;
             const nyRaw = nose.y * height;
-            
+
             // Lerp smoothing (0.4 factor)
             const prev = noseRef.current || { x: nxRaw, y: nyRaw, vx: 0, vy: 0 };
             const nx = prev.x + (nxRaw - prev.x) * 0.4;
@@ -250,14 +273,14 @@ export default function ARGolf() {
                 FINGER_INDEXES.forEach(idx => {
                     const landmark = landmarks[idx];
                     if (!landmark) return;
-                    
+
                     const fxRaw = (1 - landmark.x) * width;
                     const fyRaw = landmark.y * height;
-                    
+
                     const prev = fingersRef.current[idx] || { x: fxRaw, y: fyRaw, vx: 0, vy: 0 };
                     const fx = prev.x + (fxRaw - prev.x) * 0.4;
                     const fy = prev.y + (fyRaw - prev.y) * 0.4;
-                    
+
                     const dx = fx - prev.x;
                     const dy = fy - prev.y;
                     fingersRef.current[idx] = { x: fx, y: fy, vx: dx, vy: dy };
@@ -291,14 +314,17 @@ export default function ARGolf() {
 
             const dist = Math.hypot(ball.x - hole.x, ball.y - hole.y);
             if (dist < hole.radius) {
-                const newScore = score + 1;
-                if (newScore >= 12) {
+                scoreRef.current += 2;
+                const newScore = scoreRef.current;
+                setScore(newScore);
+
+                if (newScore >= 24) {
+                    scoreRef.current = 0;
                     setScore(0);
                     setHoleSpeed(0);
                     setEffect('win');
                     resetPositions();
                 } else {
-                    setScore(newScore);
                     setHoleSpeed(s => s + 2);
                     setEffect('win');
                     resetBall(ball, width, height);
@@ -317,22 +343,21 @@ export default function ARGolf() {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const width = canvas.width;
+        const height = canvas.height;
 
         if (holeRef.current) {
             holeRef.current.x = width / 2;
             holeRef.current.vx = 0;
         }
 
-        ballsRef.current.forEach(ball => {
-            ball.x = width / 2;
-            ball.vx = 0;
-            ball.vy = 0;
-        });
+        ballsRef.current.forEach(ball => resetBall(ball, width, height));
     };
 
     const resetBall = (ball: Ball, width: number, height: number) => {
-        ball.x = width / 2; ball.y = height / 2;
-        ball.vx = 0; ball.vy = 0;
+        ball.x = width / 2;
+        ball.y = height / 2;
+        ball.vx = 0;
+        ball.vy = 0;
     };
 
     const drawGame = (ctx: CanvasRenderingContext2D, width: number, height: number, results: any) => {
@@ -455,7 +480,7 @@ export default function ARGolf() {
             const nose = results.faceLandmarks[0][1];
             const nx = (1 - nose.x) * width;
             const ny = nose.y * height;
-            
+
             // Marker Trail
             markerTrailsRef.current.push({ x: nx, y: ny });
             if (markerTrailsRef.current.length > 3) markerTrailsRef.current.shift();
@@ -465,10 +490,10 @@ export default function ARGolf() {
             });
 
             ctx.beginPath(); ctx.arc(nx, ny, 15, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255, 105, 180, 0.3)'; ctx.fill(); 
-            
+            ctx.fillStyle = 'rgba(255, 105, 180, 0.3)'; ctx.fill();
+
             ctx.beginPath(); ctx.arc(nx, ny, 6, 0, Math.PI * 2);
-            ctx.fillStyle = '#FF69B4'; ctx.fill(); 
+            ctx.fillStyle = '#FF69B4'; ctx.fill();
         } else if (!isHard && handLandmarks && handLandmarks[0]) {
             const landmarks = handLandmarks[0];
             FINGER_INDEXES.forEach(idx => {
@@ -478,18 +503,18 @@ export default function ARGolf() {
                 const fy = tip.y * height;
 
                 ctx.beginPath(); ctx.arc(fx, fy, 10, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(255, 105, 180, 0.2)'; ctx.fill(); 
+                ctx.fillStyle = 'rgba(255, 105, 180, 0.2)'; ctx.fill();
 
                 ctx.beginPath(); ctx.arc(fx, fy, 4, 0, Math.PI * 2);
-                ctx.fillStyle = '#FF69B4'; ctx.fill(); 
+                ctx.fillStyle = '#FF69B4'; ctx.fill();
             });
         }
     };
 
     return (
         <div className="w-full h-full bg-black flex items-center justify-center relative">
-            <video ref={videoRef} className="hidden" autoPlay playsInline />
-            <canvas ref={canvasRef} className="w-full h-full object-cover pointer-events-none" width={1280} height={720} />
+            <video ref={videoRef} className="hidden" autoPlay playsInline muted />
+            <canvas ref={canvasRef} className="w-full h-full object-cover pointer-events-none" />
 
             {!isStarted && (
                 <div className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-3xl flex items-center justify-center">
@@ -502,14 +527,14 @@ export default function ARGolf() {
                 </div>
             )}
 
-            <div className="absolute bottom-12 right-12 flex flex-col items-end gap-4 z-40">
-                <button 
+            <div className="absolute bottom-4 lg:bottom-12 right-4 lg:right-12 flex flex-col items-end gap-4 z-40 scale-75 lg:scale-100 origin-bottom-right">
+                <button
                     onClick={() => {
                         const next = !isHardMode;
                         setIsHardMode(next);
                         isHardModeRef.current = next;
                     }}
-                    className="group bg-black/60 hover:bg-black/80 backdrop-blur-3xl text-white border border-white/20 px-8 py-5 rounded-[2.5rem] font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-2xl flex items-center gap-4 border-l-4 border-l-purple-500"
+                    className="group bg-black/60 hover:bg-black/80 backdrop-blur-3xl text-white border border-white/20 px-6 lg:px-8 py-4 lg:py-5 rounded-[2.5rem] font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-2xl flex items-center gap-4 border-l-4 border-l-purple-500"
                 >
                     <div className="flex flex-col items-end text-right">
                         <span className="opacity-40 text-[8px] tracking-[0.3em]">Style Switcher</span>
@@ -520,10 +545,10 @@ export default function ARGolf() {
                 </button>
             </div>
 
-            <div className="absolute bottom-12 left-12 flex flex-col items-start gap-4 z-40">
+            <div className="absolute bottom-4 lg:bottom-12 left-4 lg:left-12 flex flex-col items-start gap-4 z-40 scale-75 lg:scale-100 origin-bottom-left">
                 <button
                     onClick={resetPositions}
-                    className="bg-white/10 hover:bg-white/20 backdrop-blur-3xl text-white border border-white/10 px-8 py-6 rounded-[2.5rem] font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-2xl group flex flex-col items-start gap-1"
+                    className="bg-white/10 hover:bg-white/20 backdrop-blur-3xl text-white border border-white/10 px-6 lg:px-8 py-4 lg:py-6 rounded-[2.5rem] font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-2xl group flex flex-col items-start gap-1"
                 >
                     <span className="opacity-40 text-[8px] tracking-[0.2em] mb-1">Fail-Safe</span>
                     <div className="flex items-center gap-3">
@@ -533,16 +558,11 @@ export default function ARGolf() {
                 </button>
             </div>
 
-            <div className="absolute top-12 right-12 flex flex-col items-end gap-5 pointer-events-none z-40">
+            <div className="absolute top-4 lg:top-12 right-4 lg:right-12 flex flex-col items-end gap-5 pointer-events-none z-40 scale-75 lg:scale-100 origin-top-right">
                 <div className="bg-black/60 backdrop-blur-3xl border border-white/10 px-6 py-4 rounded-[2rem] shadow-2xl flex flex-col items-end gap-2 border-r-4 border-r-white/20">
                     <div className="flex flex-col items-end leading-none">
                         <span className="text-[7px] font-black uppercase tracking-[0.3em] text-white/30 mb-1">Score</span>
                         <span className="text-3xl font-black text-white italic">{score}</span>
-                    </div>
-                    <div className="w-8 h-[1px] bg-white/10" />
-                    <div className="flex flex-col items-end leading-none">
-                        <span className="text-[7px] font-black uppercase tracking-[0.3em] text-green-500/50 mb-1">Level</span>
-                        <span className="text-xl font-black text-white italic opacity-70">{score}<span className="text-[10px] text-white/20 ml-0.5">/12</span></span>
                     </div>
                 </div>
             </div>
