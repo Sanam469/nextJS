@@ -514,15 +514,15 @@ export default function ARGolf() {
             </div>
 
             <div className="absolute top-12 right-12 flex flex-col items-end gap-5 pointer-events-none z-40">
-                <div className="bg-black/60 backdrop-blur-3xl border border-white/5 px-10 py-6 rounded-[3rem] shadow-2xl flex items-center gap-8">
-                    <div className="flex flex-col items-end">
-                        <span className="text-[9px] font-black uppercase tracking-[0.4em] text-white/30 block mb-1">Session Points</span>
-                        <span className="text-6xl font-black text-white italic drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{score}</span>
+                <div className="bg-black/60 backdrop-blur-3xl border border-white/10 px-6 py-4 rounded-[2rem] shadow-2xl flex flex-col items-end gap-2 border-r-4 border-r-white/20">
+                    <div className="flex flex-col items-end leading-none">
+                        <span className="text-[7px] font-black uppercase tracking-[0.3em] text-white/30 mb-1">Score</span>
+                        <span className="text-3xl font-black text-white italic">{score}</span>
                     </div>
-                    <div className="w-[1px] h-12 bg-white/10" />
-                    <div className="flex flex-col items-start">
-                        <span className="text-[9px] font-black uppercase tracking-[0.4em] text-green-500 block mb-1">Progress</span>
-                        <span className="text-4xl font-black text-white italic opacity-80">{score}<span className="text-lg text-white/20 not-italic ml-1">/ 12</span></span>
+                    <div className="w-8 h-[1px] bg-white/10" />
+                    <div className="flex flex-col items-end leading-none">
+                        <span className="text-[7px] font-black uppercase tracking-[0.3em] text-green-500/50 mb-1">Level</span>
+                        <span className="text-xl font-black text-white italic opacity-70">{score}<span className="text-[10px] text-white/20 ml-0.5">/12</span></span>
                     </div>
                 </div>
             </div>
