@@ -49,6 +49,7 @@ export default function ARGolf() {
     const winAudioRef = useRef<HTMLAudioElement | null>(null);
     const fliesRef = useRef<{ x: number, y: number, vx: number, vy: number }[]>([]);
     const windParticlesRef = useRef<{ x: number, y: number, speed: number, length: number }[]>([]);
+    const grassEdgesRef = useRef<{ left: number[], right: number[], bottom: number[] }>({ left: [], right: [], bottom: [] });
 
     useEffect(() => {
         let timer: NodeJS.Timeout;
@@ -79,6 +80,13 @@ export default function ARGolf() {
             vx: (Math.random() - 0.5) * 2,
             vy: (Math.random() - 0.5) * 2
         }));
+
+        // Cache grass offsets for smoothness
+        grassEdgesRef.current = {
+            left: Array.from({ length: 100 }, () => Math.random() * 10),
+            right: Array.from({ length: 100 }, () => Math.random() * 10),
+            bottom: Array.from({ length: 200 }, () => Math.random() * 12),
+        };
 
         startCamera();
     };
@@ -171,7 +179,7 @@ export default function ARGolf() {
 
     const updateGame = (results: any, width: number, height: number) => {
         const hole = holeRef.current;
-        if (!hole) return;
+        if (!hole || !results) return;
 
         hole.x += hole.vx;
         if (hole.x > width - SIDE_MARGIN - 60 || hole.x < SIDE_MARGIN + 60) hole.vx *= -1;
@@ -311,6 +319,7 @@ export default function ARGolf() {
     };
 
     const drawGame = (ctx: CanvasRenderingContext2D, width: number, height: number, results: any) => {
+        if (!results) return;
         const drawGrassBoundary = (x: number, y: number, w: number, h: number, orientation: 'left' | 'right' | 'bottom') => {
             // Use fixed colors instead of recreating gradients every frame for performance
             ctx.fillStyle = '#064e3b';
@@ -322,27 +331,29 @@ export default function ARGolf() {
             else if (orientation === 'left') ctx.fillRect(x, y, w / 2, h);
             else if (orientation === 'right') ctx.fillRect(x + w / 2, y, w / 2, h);
 
-            // Jagged Grass Edge
             ctx.beginPath();
             ctx.fillStyle = 'rgba(34, 197, 94, 0.5)';
             const bladeSize = 8;
             if (orientation === 'left') {
-                for (let i = 0; i < h; i += bladeSize) {
-                    ctx.lineTo(x + w, i);
-                    ctx.lineTo(x + w + Math.random() * 10, i + bladeSize / 2);
-                }
+                grassEdgesRef.current.left.forEach((offset, i) => {
+                    const py = i * bladeSize;
+                    ctx.lineTo(x + w, py);
+                    ctx.lineTo(x + w + offset, py + bladeSize / 2);
+                });
                 ctx.lineTo(x + w, h); ctx.lineTo(x, h); ctx.lineTo(x, 0);
             } else if (orientation === 'right') {
-                for (let i = 0; i < h; i += bladeSize) {
-                    ctx.lineTo(x, i);
-                    ctx.lineTo(x - Math.random() * 10, i + bladeSize / 2);
-                }
+                grassEdgesRef.current.right.forEach((offset, i) => {
+                    const py = i * bladeSize;
+                    ctx.lineTo(x, py);
+                    ctx.lineTo(x - offset, py + bladeSize / 2);
+                });
                 ctx.lineTo(x, h); ctx.lineTo(x + w, h); ctx.lineTo(x + w, 0);
             } else if (orientation === 'bottom') {
-                for (let i = 0; i < w; i += bladeSize) {
-                    ctx.lineTo(i, y);
-                    ctx.lineTo(i + bladeSize / 2, y - Math.random() * 12);
-                }
+                grassEdgesRef.current.bottom.forEach((offset, i) => {
+                    const px = i * bladeSize;
+                    ctx.lineTo(px, y);
+                    ctx.lineTo(px + bladeSize / 2, y - offset);
+                });
                 ctx.lineTo(w, y); ctx.lineTo(w, y + h); ctx.lineTo(0, y + h);
             }
             ctx.fill();
@@ -422,7 +433,7 @@ export default function ARGolf() {
         });
         const isHard = isHardModeRef.current;
 
-        } else if (isHard && results.faceLandmarks && results.faceLandmarks[0]) {
+        if (isHard && results.faceLandmarks && results.faceLandmarks[0]) {
             const nose = results.faceLandmarks[0][1];
             const nx = (1 - nose.x) * width;
             const ny = nose.y * height;
