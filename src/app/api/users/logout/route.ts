@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 
-export async function GET() {
+export async function POST() {
     try {
         console.log("Logout API initiated");
         const response = NextResponse.json(
