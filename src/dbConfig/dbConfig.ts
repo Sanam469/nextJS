@@ -3,10 +3,16 @@ import mongoose from 'mongoose';
 export async function connect() {
     try {
         if (mongoose.connection.readyState >= 1) {
+            console.log('Using existing MongoDB connection');
             return;
         }
 
-        await mongoose.connect(process.env.MONGO_URI!);
+        console.log('Attempting to connect to MongoDB...');
+        if (!process.env.MONGO_URI) {
+            throw new Error('MONGO_URI environment variable is not defined');
+        }
+
+        await mongoose.connect(process.env.MONGO_URI);
         const connection = mongoose.connection;
 
         connection.on('connected', () => {
@@ -14,13 +20,13 @@ export async function connect() {
         })
 
         connection.on('error', (err) => {
-            console.log('MongoDB connection error. Please make sure MongoDB is running. ' + err);
-            process.exit();
+            console.error('MongoDB connection error: ', err);
+            // In serverless, we don't want to exit the process
         })
 
     } catch (error) {
-        console.log('Something goes wrong!');
-        console.log(error);
-        throw error; // Rethrow to let the caller handle it
+        console.error('CRITICAL: MongoDB connection failed!');
+        console.error(error);
+        throw error; 
     }
 }
