@@ -83,7 +83,7 @@ export default function LoginPage() {
                 {loading ? "Signing in..." : "Login"}
             </button>
             <div className="mt-8 text-center text-sm text-gray-400">
-                Don't have an account? <Link href="/signup" className="text-white hover:text-gray-200 transition-colors ml-1">Sign up</Link>
+                Don&apos;t have an account? <Link href="/signup" className="text-white hover:text-gray-200 transition-colors ml-1">Sign up</Link>
             </div>
         </div>
     </div>

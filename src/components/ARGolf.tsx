@@ -380,7 +380,7 @@ export default function ARGolf() {
                         <div className="w-32 h-32 rounded-full bg-white flex items-center justify-center shadow-[0_0_80px_rgba(255,255,255,0.3)] animate-pulse">
                             <svg className="w-14 h-14 text-black fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                         </div>
-                        <span className="text-white text-sm font-black uppercase tracking-[1em] opacity-80 group-hover:opacity-100 italic transition-opacity">LET'S GOLF!</span>
+                        <span className="text-white text-sm font-black uppercase tracking-[1em] opacity-80 group-hover:opacity-100 italic transition-opacity">LET&apos;S GOLF!</span>
                     </button>
                 </div>
             )}
