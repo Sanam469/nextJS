@@ -42,6 +42,8 @@ export default function ARGolf() {
     const faceLandmarkerRef = useRef<FaceLandmarker | null>(null);
     const handLandmarkerRef = useRef<HandLandmarker | null>(null);
     const isHardModeRef = useRef(false);
+    const ballTrailsRef = useRef<Record<number, {x: number, y: number}[]>>({});
+    const markerTrailsRef = useRef<{x: number, y: number}[]>([]);
 
     const missAudioRef = useRef<HTMLAudioElement | null>(null);
     const winAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -252,6 +254,12 @@ export default function ARGolf() {
             ball.x += ball.vx;
             ball.y += ball.vy;
 
+            // Store trails for smoothness
+            const trail = ballTrailsRef.current[ball.id] || [];
+            trail.push({ x: ball.x, y: ball.y });
+            if (trail.length > 5) trail.shift();
+            ballTrailsRef.current[ball.id] = trail;
+
             if (ball.x < ball.radius + SIDE_MARGIN) { ball.x = ball.radius + SIDE_MARGIN; ball.vx *= -0.7; }
             if (ball.x > width - ball.radius - SIDE_MARGIN) { ball.x = width - ball.radius - SIDE_MARGIN; ball.vx *= -0.7; }
             if (ball.y > height - ball.radius - BOTTOM_WALL) { ball.y = height - ball.radius - BOTTOM_WALL; ball.vy *= -0.7; }
@@ -400,18 +408,33 @@ export default function ARGolf() {
             ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke();
         }
         ballsRef.current.forEach(ball => {
+            // Draw Trails
+            const trail = ballTrailsRef.current[ball.id] || [];
+            trail.forEach((pos, i) => {
+                const alpha = (i / trail.length) * 0.3;
+                ctx.beginPath(); ctx.arc(pos.x, pos.y, ball.radius * (i / trail.length), 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 105, 180, ${alpha})`; ctx.fill();
+            });
+
             ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
             ctx.fillStyle = '#FF69B4'; ctx.fill();
-            // Simple stroke instead of shadowBlur for better performance
             ctx.strokeStyle = 'rgba(255, 105, 180, 0.5)'; ctx.lineWidth = 4; ctx.stroke();
         });
         const isHard = isHardModeRef.current;
 
-        if (isHard && results.faceLandmarks && results.faceLandmarks[0]) {
+        } else if (isHard && results.faceLandmarks && results.faceLandmarks[0]) {
             const nose = results.faceLandmarks[0][1];
             const nx = (1 - nose.x) * width;
             const ny = nose.y * height;
             
+            // Marker Trail
+            markerTrailsRef.current.push({ x: nx, y: ny });
+            if (markerTrailsRef.current.length > 3) markerTrailsRef.current.shift();
+            markerTrailsRef.current.forEach((pos, i) => {
+                ctx.beginPath(); ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 105, 180, ${(i / 3) * 0.2})`; ctx.fill();
+            });
+
             ctx.beginPath(); ctx.arc(nx, ny, 15, 0, Math.PI * 2);
             ctx.fillStyle = 'rgba(255, 105, 180, 0.3)'; ctx.fill(); 
             
@@ -424,10 +447,10 @@ export default function ARGolf() {
                 const fy = tip.y * height;
 
                 ctx.beginPath(); ctx.arc(fx, fy, 10, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(255, 105, 180, 0.2)'; ctx.fill(); // Outer glow (fake)
+                ctx.fillStyle = 'rgba(255, 105, 180, 0.2)'; ctx.fill(); 
 
                 ctx.beginPath(); ctx.arc(fx, fy, 4, 0, Math.PI * 2);
-                ctx.fillStyle = '#FF69B4'; ctx.fill(); // Inner marker
+                ctx.fillStyle = '#FF69B4'; ctx.fill(); 
             });
         }
     };
@@ -455,30 +478,41 @@ export default function ARGolf() {
                         setIsHardMode(next);
                         isHardModeRef.current = next;
                     }}
-                    className="group bg-black/60 hover:bg-black/80 backdrop-blur-3xl text-white border border-white/20 px-8 py-5 rounded-[2rem] font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-2xl flex items-center gap-4 border-l-4 border-l-purple-500"
+                    className="group bg-black/60 hover:bg-black/80 backdrop-blur-3xl text-white border border-white/20 px-8 py-5 rounded-[2.5rem] font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-2xl flex items-center gap-4 border-l-4 border-l-purple-500"
                 >
                     <div className="flex flex-col items-end text-right">
-                        <span className="opacity-40 text-[8px] tracking-[0.3em]">Difficulty: {isHardMode ? 'Insane' : 'Standard'}</span>
-                        <span className="group-hover:text-purple-400 transition-colors uppercase">golf is now ur nose</span>
+                        <span className="opacity-40 text-[8px] tracking-[0.3em]">Style Switcher</span>
+                        <span className="group-hover:text-purple-400 transition-colors uppercase">
+                            {isHardMode ? 'Standard Style ☝️' : 'Nose Style 😈'}
+                        </span>
                     </div>
-                    <span className="text-xl">😈</span>
                 </button>
             </div>
 
             <div className="absolute bottom-12 left-12 flex flex-col items-start gap-4 z-40">
                 <button
                     onClick={resetPositions}
-                    className="bg-white/10 hover:bg-white/20 backdrop-blur-3xl text-white border border-white/10 px-8 py-4 rounded-[2rem] font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-2xl group flex items-center gap-3"
+                    className="bg-white/10 hover:bg-white/20 backdrop-blur-3xl text-white border border-white/10 px-8 py-6 rounded-[2.5rem] font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-2xl group flex flex-col items-start gap-1"
                 >
-                    <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                    Reset Level
+                    <span className="opacity-40 text-[8px] tracking-[0.2em] mb-1">Fail-Safe</span>
+                    <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                        Reset Level
+                    </div>
                 </button>
             </div>
 
-            <div className="absolute top-12 right-12 flex flex-col items-end gap-3 pointer-events-none z-40">
-                <div className="bg-black/60 backdrop-blur-2xl border border-white/5 px-8 py-5 rounded-[2rem] shadow-2xl">
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 block mb-1">Points</span>
-                    <span className="text-5xl font-black text-white italic drop-shadow-md">{score}</span>
+            <div className="absolute top-12 right-12 flex flex-col items-end gap-5 pointer-events-none z-40">
+                <div className="bg-black/60 backdrop-blur-3xl border border-white/5 px-10 py-6 rounded-[3rem] shadow-2xl flex items-center gap-8">
+                    <div className="flex flex-col items-end">
+                        <span className="text-[9px] font-black uppercase tracking-[0.4em] text-white/30 block mb-1">Session Points</span>
+                        <span className="text-6xl font-black text-white italic drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{score}</span>
+                    </div>
+                    <div className="w-[1px] h-12 bg-white/10" />
+                    <div className="flex flex-col items-start">
+                        <span className="text-[9px] font-black uppercase tracking-[0.4em] text-green-500 block mb-1">Progress</span>
+                        <span className="text-4xl font-black text-white italic opacity-80">{score}<span className="text-lg text-white/20 not-italic ml-1">/ 12</span></span>
+                    </div>
                 </div>
             </div>
 
