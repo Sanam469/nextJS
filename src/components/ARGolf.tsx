@@ -220,7 +220,7 @@ export default function ARGolf() {
 
             ballsRef.current.forEach(ball => {
                 const dist = Math.hypot(ball.x - nx, ball.y - ny);
-                if (dist < ball.radius + 40 && Math.hypot(dx, dy) > 1) {
+                if (dist < ball.radius + 20 && Math.hypot(dx, dy) > 1) {
                     ball.vx = dx * 2.2; // Extra punch for nose mode
                     ball.vy = dy * 2.2;
                 }
