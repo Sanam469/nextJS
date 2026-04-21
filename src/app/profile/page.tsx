@@ -22,7 +22,7 @@ export default function ProfilePage() {
             setIsLoggingOut(true)
             await axios.post('/api/users/logout')
             toast.success('Logout successful')
-            router.push('/login')
+            window.location.href = "/login"
         } catch (error:any) {
             setIsLoggingOut(false)
             console.log(error.message);
