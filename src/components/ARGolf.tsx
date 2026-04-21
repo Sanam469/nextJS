@@ -221,7 +221,8 @@ export default function ARGolf() {
         });
 
         if (isHard && results.faceLandmarks && results.faceLandmarks[0]) {
-            const nose = results.faceLandmarks[0][1];
+            const landmarks = results.faceLandmarks[0];
+            const nose = landmarks[1]; // Nose Tip center
             const nxRaw = (1 - nose.x) * width;
             const nyRaw = nose.y * height;
             
@@ -241,30 +242,35 @@ export default function ARGolf() {
                     ball.vy = dy * 2.2;
                 }
             });
-        } else if (!isHard && results.landmarks && results.landmarks[0]) {
-            const landmarks = results.landmarks[0];
-            FINGER_INDEXES.forEach(idx => {
-                const landmark = landmarks[idx];
-                const fxRaw = (1 - landmark.x) * width;
-                const fyRaw = landmark.y * height;
-                
-                const prev = fingersRef.current[idx] || { x: fxRaw, y: fyRaw, vx: 0, vy: 0 };
-                // Lerp smoothing
-                const fx = prev.x + (fxRaw - prev.x) * 0.4;
-                const fy = prev.y + (fyRaw - prev.y) * 0.4;
-                
-                const dx = fx - prev.x;
-                const dy = fy - prev.y;
-                fingersRef.current[idx] = { x: fx, y: fy, vx: dx, vy: dy };
+        } else {
+            // Hand detection (Standard Mode)
+            const handLandmarks = results.landmarks || results.handLandmarks;
+            if (!isHard && handLandmarks && handLandmarks[0]) {
+                const landmarks = handLandmarks[0];
+                FINGER_INDEXES.forEach(idx => {
+                    const landmark = landmarks[idx];
+                    if (!landmark) return;
+                    
+                    const fxRaw = (1 - landmark.x) * width;
+                    const fyRaw = landmark.y * height;
+                    
+                    const prev = fingersRef.current[idx] || { x: fxRaw, y: fyRaw, vx: 0, vy: 0 };
+                    const fx = prev.x + (fxRaw - prev.x) * 0.4;
+                    const fy = prev.y + (fyRaw - prev.y) * 0.4;
+                    
+                    const dx = fx - prev.x;
+                    const dy = fy - prev.y;
+                    fingersRef.current[idx] = { x: fx, y: fy, vx: dx, vy: dy };
 
-                ballsRef.current.forEach(ball => {
-                    const dist = Math.hypot(ball.x - fx, ball.y - fy);
-                    if (dist < ball.radius + 20 && Math.hypot(dx, dy) > 2) {
-                        ball.vx = dx * 1.8;
-                        ball.vy = dy * 1.8;
-                    }
+                    ballsRef.current.forEach(ball => {
+                        const dist = Math.hypot(ball.x - fx, ball.y - fy);
+                        if (dist < ball.radius + 20 && Math.hypot(dx, dy) > 1.5) {
+                            ball.vx = dx * 1.8;
+                            ball.vy = dy * 1.8;
+                        }
+                    });
                 });
-            });
+            }
         }
 
         ballsRef.current.forEach(ball => {
@@ -443,6 +449,7 @@ export default function ARGolf() {
             ctx.strokeStyle = 'rgba(255, 105, 180, 0.5)'; ctx.lineWidth = 4; ctx.stroke();
         });
         const isHard = isHardModeRef.current;
+        const handLandmarks = results.landmarks || results.handLandmarks;
 
         if (isHard && results.faceLandmarks && results.faceLandmarks[0]) {
             const nose = results.faceLandmarks[0][1];
@@ -462,9 +469,11 @@ export default function ARGolf() {
             
             ctx.beginPath(); ctx.arc(nx, ny, 6, 0, Math.PI * 2);
             ctx.fillStyle = '#FF69B4'; ctx.fill(); 
-        } else if (!isHard && results.landmarks && results.landmarks[0]) {
+        } else if (!isHard && handLandmarks && handLandmarks[0]) {
+            const landmarks = handLandmarks[0];
             FINGER_INDEXES.forEach(idx => {
-                const tip = results.landmarks[0][idx];
+                const tip = landmarks[idx];
+                if (!tip) return;
                 const fx = (1 - tip.x) * width;
                 const fy = tip.y * height;
 
