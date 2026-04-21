@@ -4,8 +4,8 @@
 
 @layer base {
   body {
-    @apply bg-slate-900 text-slate-200 antialiased;
-    background-image: radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.05) 0%, rgba(0, 0, 0, 0.8) 70%, rgba(0,0,0,1) 100%);
+    @apply bg-black text-white antialiased;
+    background-image: radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.03) 0%, rgba(0, 0, 0, 0.9) 70%, rgba(0,0,0,1) 100%);
     background-attachment: fixed;
     min-height: 100vh;
   }

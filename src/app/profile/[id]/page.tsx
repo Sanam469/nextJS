@@ -24,8 +24,8 @@ export default function UserProfile({params}: any) {
                     </div>
 
                     <div className="flex items-center justify-center gap-3 bg-white/5 py-2 px-4 rounded-full border border-white/10">
-                        <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)]"></div>
-                        <span className="text-xs font-bold text-green-500 uppercase tracking-widest">Active Session</span>
+                        <div className="w-2 h-2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.4)]"></div>
+                        <span className="text-xs font-bold text-white uppercase tracking-widest">Active Session</span>
                     </div>
                 </div>
             </div>
